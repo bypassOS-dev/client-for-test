@@ -4,8 +4,10 @@ use std::sync::mpsc;
 
 fn main() {
     let cool = vec!["Rust".to_string(), "is".to_string(), "cool".to_string()];
-    let mut secret = 1234;
+    let secret = 1234;
+
     let (tx, rx) = mpsc::channel();
+    let tx1 = tx.clone();
 
     let thread1 = thread::spawn(move || {
         let mut sum = 0;
@@ -18,7 +20,7 @@ fn main() {
         println!("{:?}",cool);
         tx.send(secret).unwrap();
     });
-    let thread2 = thread::spawn(|| {
+    let thread2 = thread::spawn(move || {
         let mut sum = 0;
         for i in 1..=10000 {
             sum += i;
@@ -26,6 +28,8 @@ fn main() {
             thread::sleep(Duration::from_millis(1));
         }
         println!("{}(2)",sum);
+        let some = 123;
+        tx1.send(some).unwrap();
     });
     let thread3 = thread::spawn(move || {
         let mut sum = 0;
@@ -36,9 +40,12 @@ fn main() {
         }
         println!("{}(3)",sum);
         let another = rx.recv().unwrap();
-        println!("{another}");
+        let another1 = rx1.recv().unwrap();
+        println!("{another}, {another1}");
     });
     thread1.join().unwrap();
     thread2.join().unwrap();
     thread3.join().unwrap();
+
+    
 }
