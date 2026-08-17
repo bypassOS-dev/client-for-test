@@ -1,51 +1,15 @@
-use std::thread;
-use std::time::Duration;
-use std::sync::mpsc;
+use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream};
 
-fn main() {
-    let cool = vec!["Rust".to_string(), "is".to_string(), "cool".to_string()];
-    let secret = 1234;
+#[tokio::main]
+async fn main() {
+    let mut socket = TcpStream::connect("127.0.0.1:8080").await.unwrap();
+    let greet = "Hello, server!".as_bytes();
 
-    let (tx, rx) = mpsc::channel();
-    let tx1 = tx.clone();
-
-    let thread1 = thread::spawn(move || {
-        let mut sum = 0;
-        for i in 1..=10000 {
-            sum += i;
-            println!("{i}");
-            thread::sleep(Duration::from_millis(1));
-        }
-        println!("{}(1)",sum);
-        println!("{:?}",cool);
-        tx.send(secret).unwrap();
-    });
-    let thread2 = thread::spawn(move || {
-        let mut sum = 0;
-        for i in 1..=10000 {
-            sum += i;
-            println!("{i}");
-            thread::sleep(Duration::from_millis(1));
-        }
-        println!("{}(2)",sum);
-        let some = 123;
-        tx1.send(some).unwrap();
-    });
-    let thread3 = thread::spawn(move || {
-        let mut sum = 0;
-        for i in 1..=10000 {
-            sum += i;
-            println!("{i}");
-            thread::sleep(Duration::from_millis(1));
-        }
-        println!("{}(3)",sum);
-        let another = rx.recv().unwrap();
-        let another1 = rx1.recv().unwrap();
-        println!("{another}, {another1}");
-    });
-    thread1.join().unwrap();
-    thread2.join().unwrap();
-    thread3.join().unwrap();
-
-    
+    if let Err(err) = socket.write_all(&greet).await {
+        eprintln!("Write error: {err}");
+    }
+    let mut buffer = [0u8; 1024];
+    let n = socket.read(&mut buffer).await.unwrap();
+    let text = String::from_utf8_lossy(&buffer[..n]);
+    println!("Text: {text}");
 }
