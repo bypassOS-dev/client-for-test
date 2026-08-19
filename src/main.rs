@@ -41,12 +41,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
             _ =  send_and_get(&mut tls_stream, greet, &mut buffer) => {
                 println!("Your data was sent!");
             }
-            _ = tokio::signal::ctrl_c() => {
-                tls_stream.read(&mut [0]).await?;
+            _ = tokio::signal::ctrl_c() => {    //graceful shut down
+                println!("Shutting down...");
+                tls_stream.shutdown().await?;
+                break;
             }
         }
-        
     }
+    Ok(())
 }
 fn load_certs() -> Vec<rustls::pki_types::CertificateDer<'static>>{
     //open file from path:
