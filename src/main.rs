@@ -1,6 +1,6 @@
 use rustls::pki_types::ServerName;
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream};
-use tokio_rustls::TlsConnector;
+use tokio_rustls::{TlsConnector, client::TlsStream};
 use std::io::BufReader;
 use std::sync::Arc;
 #[tokio::main]
@@ -12,8 +12,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     //get all certificates from "cert.pem"
     for cert in certs {
-    root_cert.add(cert)?;
-        }
+        root_cert.add(cert)?;
+    }
 
     //create TLS-client settings
     let config = rustls::ClientConfig::builder()
@@ -34,16 +34,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     let greet = "Hello, server!".as_bytes();
 
-    if let Err(err) = tls_stream.write_all(greet).await {
-        eprintln!("Write error: {err}");
-    }
-
     let mut buffer = [0u8; 1024];
-    let n = tls_stream.read(&mut buffer).await.unwrap();
-    let text = String::from_utf8_lossy(&buffer[..n]);
 
-    println!("Text: {text}");
-    Ok(())
+    loop {
+        tokio::select! {
+            _ =  send_and_get(&mut tls_stream, greet, &mut buffer) => {
+                println!("Your data was sent!");
+            }
+            _ = tokio::signal::ctrl_c() => {
+                tls_stream.read(&mut [0]).await?;
+            }
+        }
+        
+    }
 }
 fn load_certs() -> Vec<rustls::pki_types::CertificateDer<'static>>{
     //open file from path:
@@ -54,6 +57,19 @@ fn load_certs() -> Vec<rustls::pki_types::CertificateDer<'static>>{
 
     // "rustls_pemfile" return iterator:
     rustls_pemfile::certs(&mut reader)
-        .map(|cert| cert.unwrap())
-        .collect()
-} 
+    .map(|cert| cert.unwrap())
+    .collect()
+}
+async fn send_and_get(tls_stream: &mut TlsStream<TcpStream>, greet: &[u8], buffer: &mut [u8;1024]) {
+    println!("Writing some...");
+    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+
+    if let Err(err) = tls_stream.write_all(greet).await {
+        eprintln!("Write error: {err}");
+    }
+        
+    let n = tls_stream.read(buffer).await.unwrap();
+    let text = String::from_utf8_lossy(&buffer[..n]);
+
+    println!("Text: {text}");
+}
