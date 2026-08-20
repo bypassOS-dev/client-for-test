@@ -1,3 +1,4 @@
+use rand::Rng;
 use rustls::pki_types::ServerName;
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream};
 use tokio_rustls::{TlsConnector, client::TlsStream};
@@ -20,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
         .with_root_certificates(root_cert) // We give OUR certificates (from "root_cert")
         .with_no_client_auth(); //Don't use client's certificates
 
-    //Create TLS-connector using my config (TLS settings) 
+    //Create TLS-connector using our config (TLS settings) 
     let connector = TlsConnector::from(Arc::new(config));
 
     //Get type "ServerName" | and give owned to "domain" ("try_from" crete a link)
@@ -42,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
                 println!("Your data was sent!");
             }
             _ = tokio::signal::ctrl_c() => {    //graceful shut down
-                println!("Shutting down...");
+                println!("\nShutting down...");
                 tls_stream.shutdown().await?;
                 break;
             }
@@ -64,7 +65,8 @@ fn load_certs() -> Vec<rustls::pki_types::CertificateDer<'static>>{
 }
 async fn send_and_get(tls_stream: &mut TlsStream<TcpStream>, greet: &[u8], buffer: &mut [u8;1024]) {
     println!("Writing some...");
-    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+    let random = rand::thread_rng().gen_range(1..5000);
+    tokio::time::sleep(tokio::time::Duration::from_millis(random)).await;
 
     if let Err(err) = tls_stream.write_all(greet).await {
         eprintln!("Write error: {err}");
