@@ -40,4 +40,11 @@ impl AsyncWrite for FragmentingStream {
             Pin::new(&mut this.inner).poll_write(cx, buf)
         }
     }
+    fn poll_flush(
+        self: Pin<&mut Self>, 
+        cx: &mut Context<'_>
+    ) -> Poll<std::io::Result<()>> {
+        let this = self.get_mut();
+        Pin::new(&mut this.inner).poll_flush(cx)
+    }
 }
