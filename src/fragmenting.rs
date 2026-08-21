@@ -47,4 +47,11 @@ impl AsyncWrite for FragmentingStream {
         let this = self.get_mut();
         Pin::new(&mut this.inner).poll_flush(cx)
     }
+    fn poll_shutdown(
+        self: Pin<&mut Self>, 
+        cx: &mut Context<'_>
+    ) -> Poll<std::io::Result<()>> {
+        let this = self.get_mut();
+        Pin::new(&mut this.inner).poll_shutdown(cx)
+    }
 }
