@@ -1,9 +1,13 @@
 use rand::Rng;
 use rustls::pki_types::ServerName;
-use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream};
+use tokio::{io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt}, net::TcpStream};
 use tokio_rustls::{TlsConnector, client::TlsStream};
 use std::io::BufReader;
 use std::sync::Arc;
+//===============================================================
+mod fragmenting;
+use fragmenting::FragmentingStream;
+//===============================================================
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let certs = load_certs();
@@ -29,6 +33,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     //just connect
     let stream = TcpStream::connect("127.0.0.1:8080").await?;
+
+    //
+    let stream = FragmentingStream::new(stream);
+    //
 
     //Runing Tls HandShake
     let mut tls_stream = connector.connect(domain, stream).await?;
@@ -63,7 +71,7 @@ fn load_certs() -> Vec<rustls::pki_types::CertificateDer<'static>>{
     .map(|cert| cert.unwrap())
     .collect()
 }
-async fn send_and_get(tls_stream: &mut TlsStream<TcpStream>, greet: &[u8], buffer: &mut [u8;1024]) {
+async fn send_and_get<S: AsyncRead + AsyncWrite + Unpin>(tls_stream: &mut TlsStream<S>, greet: &[u8], buffer: &mut [u8;1024]) {
     println!("Writing some...");
     let random = rand::thread_rng().gen_range(1..5000);
     tokio::time::sleep(tokio::time::Duration::from_millis(random)).await;
