@@ -17,7 +17,7 @@ impl AsyncRead for FragmentingStream {
         cx: &mut Context<'_>,        //This "Context" is "waker" 
         buf: &mut ReadBuf<'_>        //Just buffer for data
     ) -> Poll<std::io::Result<()>>{
-        let mut this = self.get_mut();
-        Pin::new(&mut this).poll_read(cx, buf)
+        let this = self.get_mut();
+        Pin::new(&mut this.inner).poll_read(cx, buf)
     }
 }
