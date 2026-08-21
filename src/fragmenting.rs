@@ -13,10 +13,11 @@ impl FragmentingStream {
 }
 impl AsyncRead for FragmentingStream {
     fn poll_read(
-        self: Pin<&mut self>, 
-        cx: Context<'_>, 
-        buf: &[u8]
-    ) -> Poll<std::io::Result<usize>>{
-        todo!()
+        self: Pin<&mut Self>,        //It's need because rust look for move of object
+        cx: &mut Context<'_>,        //This "Context" is "waker" 
+        buf: &mut ReadBuf<'_>        //Just buffer for data
+    ) -> Poll<std::io::Result<()>>{
+        let mut this = self.get_mut();
+        Pin::new(&mut this).poll_read(cx, buf)
     }
 }
